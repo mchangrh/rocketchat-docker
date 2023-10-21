@@ -2,13 +2,15 @@ ARG NODE_VERSION=14.21.3
 ARG RC_VERSION=6.4.2
 
 # node builder
-FROM node:${NODE_VERSION}-alpine as node-builder
+FROM node:${NODE_VERSION}-bullseye as node-builder
 ARG RC_VERSION
 WORKDIR /app
 # install dependencies
 RUN \
-    apk add --no-cache \
-        alpine-sdk \
+    apt update && \
+    apt install \
+        build-essential \
+        python3 \
         gnupg \
         curl && \
     # signature verification
@@ -53,12 +55,12 @@ RUN \
     cd /app/bundle/programs/server && \
     npm install --production
 
-FROM node:${NODE_VERSION}-alpine as final
+FROM node:${NODE_VERSION}-bullseye as final
 VOLUME /app/uploads
 # user and permission setup
 RUN \
-    apk add --no-cache \
-        shadow \
+    apt update && \
+    apt install \
         fontconfig && \
     groupadd -r -g 1100 rocketchat && \
     useradd -r -g rocketchat -u 1100 rocketchat && \
