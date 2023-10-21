@@ -1,0 +1,16 @@
+services:
+  rocketchat:
+    image: ghcr.io/mchangrh/rocket.chat:latest
+    restart: always
+    environment:
+      ROOT_URL: https://example.com
+    depends_on:
+      - mongodb
+    ports:
+      - 3000:3000
+
+  mongodb:
+    image: docker.io/mongo
+    restart: always
+    volumes:
+      - ./mongo-data:/data/db
