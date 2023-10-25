@@ -1,16 +1,67 @@
 services:
   rocketchat:
+    container_name: rocketchat
     image: ghcr.io/mchangrh/rocket.chat:latest
     restart: always
     environment:
-      ROOT_URL: https://example.com
+      MONGO_URL: mongodb://mongodb1:27017/rocketchat?replicaSet=rs0
+      MONGO_OPLOG_URL: mongodb://mongodb1:27017/local?replicaSet=rs0
     depends_on:
-      - mongodb
+      - mongodb1
+      - mongodb2
     ports:
       - 3000:3000
 
-  mongodb:
+  mongodb1:
     image: docker.io/mongo
+    container_name: mongodb1
     restart: always
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: mongodb1
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+    ports:
+      - 27017:27017
     volumes:
-      - ./mongo-data:/data/db
+      - mongodb1:/data/db
+  mongodb2:
+    image: docker.io/mongo
+    container_name: mongodb2
+    restart: always
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: mongodb2
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0" ]
+    ports:
+      - 27018:27017
+    volumes:
+      - mongodb2:/data/db
+  mongoinit:
+    image: mongo
+    # this container will exit after executing the command
+    restart: "no"
+    depends_on:
+      - mongodb1
+      - mongodb2
+    command: >
+      mongosh --host mongodb1:27017 --eval 
+      '
+      config = {
+      "_id" : "rs0",
+      "members" : [
+        {
+          "_id" : 0,
+          "host" : "mongodb1:27017",
+          "priority": 2
+        },
+        {
+          "_id" : 1,
+          "host" : "mongodb2:27017",
+          "priority": 1
+        }
+      ]
+      };
+      rs.initiate(config);
+      '
+
+volumes:
+  mongodb1:
+  mongodb2:
